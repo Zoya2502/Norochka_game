@@ -349,3 +349,18 @@ body {
     color: #ddd; 
     margin-bottom: 30px;
 }
+
+/* === ФОНЫ ДЛЯ ГОНКИ (ВОЗВРАЩАЕМ) === */
+
+.bg-sky-race { 
+    background-image: url('img/bg_sky.jpg'); 
+    background-size: cover;
+    animation: raceScroll 3s linear infinite;
+}
+
+.bg-water-race { 
+    background-image: url('img/bg_water.jpg');
+    background-size: cover;
+    animation: raceScroll 3s linear infinite;
+}
+
