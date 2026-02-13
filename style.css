@@ -1,0 +1,351 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lora:ital,wght@0,400;1,400&display=swap');
+
+:root {
+    --gold-color: #ffd700;
+    --text-color: #f0f0f0;
+    --dark-bg: rgba(0, 0, 0, 0.9);
+    --gold-glow: 0 0 10px rgba(255, 215, 0, 0.7);
+}
+
+body {
+    margin: 0; padding: 0; background: #111;
+    font-family: 'Lora', serif; color: var(--text-color);
+    overflow: hidden; height: 100vh; width: 100vw;
+    user-select: none; /* Чтобы текст не выделялся при кликах */
+}
+
+/* === ФОНЫ (Добавлены классы, которых не хватало) === */
+#background-layer {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1; 
+    background-size: cover; 
+    background-position: center;
+    transition: background-image 0.5s ease-in-out; /* Плавная смена */
+}
+
+/* Пропиши здесь имена своих файлов! */
+.bg-room { background-image: url('img/bg_room.jpg'); }
+.bg-square { background-image: url('img/bg_square.jpg'); }
+.bg-field { background-image: url('img/bg_field.jpg'); }
+.bg-sky { background-image: url('img/bg_sky.jpg'); }
+.bg-water { background-image: url('img/bg_water.jpg'); }
+
+/* Фоны для гонки (с анимацией) */
+.bg-sky-race { 
+    background-image: url('img/bg_sky.jpg'); 
+    animation: raceScroll 2s linear infinite;
+}
+.bg-water-race { 
+    background-image: url('img/bg_water.jpg');
+    animation: raceScroll 2s linear infinite;
+}
+
+@keyframes raceScroll {
+    from { background-position: 0 0; }
+    to { background-position: 0 100%; } /* Движение вниз для ощущения полета вперед */
+}
+
+/* === ПЕРСОНАЖИ === */
+
+
+.char-slot {
+    position: absolute; bottom: -5%; /* Чуть ниже экрана, чтобы ноги не висели */
+    height: 85%; /* Высота персонажей */
+    transition: all 0.4s ease;
+}
+
+.char-slot img { 
+    height: 100%; width: auto; 
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); 
+}
+
+#char-left { left: 5%; transform: scaleX(-1); } /* Зеркалим левого */
+#char-right { right: 5%; }
+#char-center { left: 50%; transform: translateX(-50%); z-index: 6; height: 90%; }
+
+.hidden { display: none !important; }
+
+/* === ИНТЕРФЕЙС === */
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--dark-bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 2000;
+}
+
+/* Главное меню */
+#main-menu { 
+    background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('img/bg_room.jpg') center/cover;
+}
+.game-title { 
+    font-family: 'Cinzel', serif; font-size: 5rem; 
+    color: var(--gold-color); text-shadow: var(--gold-glow);
+    margin-bottom: 50px; text-align: center;
+}
+
+/* === ДИАЛОГОВОЕ ОКНО (Улучшено) === */
+#dialogue-box {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    width: 80%; max-width: 1000px; height: 220px;
+    background: rgba(18, 18, 18, 0.95);
+    border: 3px solid #5d4037; /* Коричневая рамка */
+    box-shadow: 0 0 0 4px #222, 0 0 30px black;
+    border-radius: 10px;
+    padding: 30px 40px;
+    z-index: 100;
+    display: flex; flex-direction: column;
+}
+
+/* === ДИАЛОГОВОЕ ОКНО (Высота и позиция зафиксированы) === */
+#dialogue-box {
+  
+    background: linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8));
+    border-top: 3px solid var(--gold-color);
+    box-sizing: border-box;
+    z-index: 100;
+    
+    padding: 30px 200px 30px 60px; /* Отступ справа для кнопки "Далее" */
+    display: flex;
+    flex-direction: column;
+}
+
+/* === СЛОЙ ПЕРСОНАЖЕЙ (Теперь он НАД диалогом) === */
+#character-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* Важное изменение: слой заканчивается там, где начинается диалог */
+    bottom: 30vh; 
+    
+    z-index: 5;
+    pointer-events: none;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+/* === СЛОТЫ ПЕРСОНАЖЕЙ (Выравниваются по низу нового слоя) === */
+.char-slot img { 
+    height: 100%; 
+    width: auto; 
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.8));
+    
+    /* Мягкое появление при смене эмоции */
+    animation: charFadeIn 0.4s ease-out; 
+}
+
+@keyframes charFadeIn {
+    from { 
+        opacity: 0.5; 
+        transform: translateY(5px); /* Легкое всплытие */
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+#speaker-name-box {
+    position: absolute; top: -20px; left: 40px;
+    background: #3e2723; border: 2px solid var(--gold-color);
+    color: var(--gold-color); padding: 5px 25px; 
+    font-family: 'Cinzel', serif; font-size: 1.4rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    border-radius: 5px;
+}
+
+#text-content { 
+    font-size: 1.3rem; line-height: 1.6; color: #fff; 
+    margin-top: 10px; overflow-y: auto; height: 100%;
+}
+
+#next-btn {
+    position: absolute; bottom: -20px; right: 40px;
+    background: var(--gold-color); border: none;
+    color: #3e2723; padding: 10px 40px; 
+    cursor: pointer; font-family: 'Cinzel', serif; font-weight: bold; font-size: 1.2rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    transition: transform 0.2s;
+    border-radius: 5px;
+}
+#next-btn:hover { transform: scale(1.05); }
+
+/* === КАРУСЕЛЬ ВЫБОРА === */
+#choice-carousel {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 600px; padding: 40px;
+    background: rgba(0,0,0,0.9); border: 2px solid var(--gold-color);
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    z-index: 500; border-radius: 15px;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+.choice-controls { display: flex; align-items: center; width: 100%; justify-content: space-between; }
+.carousel-arrow { 
+    background: none; border: 1px solid var(--gold-color); color: var(--gold-color); 
+    font-size: 2rem; cursor: pointer; padding: 5px 15px; border-radius: 50%;
+}
+#current-choice-text { 
+    font-family: 'Cinzel', serif; font-size: 1.8rem; color: #fff; text-align: center; 
+}
+.btn-primary {
+    background: #3e2723; border: 1px solid var(--gold-color); color: var(--gold-color);
+    padding: 15px 40px; font-family: 'Cinzel', serif; font-size: 1.2rem; 
+    cursor: pointer; transition: 0.3s;
+}
+.btn-primary:hover { background: var(--gold-color); color: #3e2723; }
+
+/* === ГОНКА (Улучшено) === */
+#race-screen { 
+    background-color: #333; /* Запасной цвет */
+    /* Фон задается через JS классы bg-sky-race или bg-water-race */
+}
+#race-ui {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    width: 600px; z-index: 100;
+    display: flex; align-items: center; gap: 20px;
+    background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px;
+}
+#race-progress-bar { 
+    flex-grow: 1; height: 15px; background: #222; border: 1px solid #555; border-radius: 10px; overflow: hidden;
+}
+#race-progress-fill { height: 100%; width: 0%; background: #00e676; transition: width 0.1s; }
+#race-lives { font-size: 1.5rem; letter-spacing: 5px; }
+
+#race-player {
+    position: absolute; bottom: 50px; 
+    width: 120px; height: 120px; 
+    z-index: 10; transition: left 0.1s linear;
+}
+#race-player img { width: 100%; height: 100%; object-fit: contain; }
+
+.obstacle {
+    position: absolute; width: 80px; height: 80px; z-index: 5;
+}
+.obstacle img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 5px black); }
+
+/* === ЭКРАН КОНЦОВКИ === */ 
+
+.end-text-container {
+    /* Убираем абсолютное позиционирование и градиент на весь экран */
+    width: 90%;
+    max-width: 800px;
+    margin-bottom: 5vh; /* Отступ от нижнего края экрана */
+    padding: 30px;
+    background: rgba(0, 0, 0, 0.85); /* Полупрозрачный фон для читаемости */
+    border-top: 3px solid var(--gold-color);
+    border-radius: 10px;
+    text-align: center;
+    box-sizing: border-box;
+    box-shadow: 0 0 20px black;
+}
+#end-title { font-family: 'Cinzel', serif; font-size: 4rem; color: var(--gold-color); margin: 0; }
+#end-desc { font-size: 1.5rem; margin: 20px 0 40px; }
+
+#day-indicator {
+    position: absolute; top: 20px; right: 20px;
+    font-family: 'Cinzel', serif; color: var(--gold-color); font-size: 1.5rem;
+    text-shadow: 2px 2px 0 black;
+    pointer-events: none;
+}
+
+/* === МОБИЛЬНЫЕ КНОПКИ ДЛЯ ГОНКИ (ИСПРАВЛЕНО) === */
+#mobile-controls {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 40px; /* Чуть больше отступ от краев */
+    box-sizing: border-box;
+    pointer-events: none;
+    z-index: 2001; /* Очень высокий z-index, чтобы точно были сверху */
+}
+
+#mobile-controls button {
+    pointer-events: all;
+    width: 80px;
+    height: 80px;
+    font-size: 3rem;
+    line-height: 80px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid var(--gold-color);
+    color: var(--gold-color);
+    border-radius: 50%;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s;
+}
+
+#mobile-controls button:active {
+    transform: scale(0.9);
+    background: var(--gold-color);
+    color: #000;
+}
+
+/* Я УБРАЛ БЛОК @media, КОТОРЫЙ СКРЫВАЛ КНОПКИ НА ПК. 
+   Теперь они будут видны всегда. */
+
+
+/* === ЭКРАН КОНЦОВКИ (НОВЫЙ ДИЗАЙН) === */
+#end-screen { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Чтобы размытие не вылезало */
+}
+
+/* Псевдо-элемент для размытого фона */
+#end-screen::before {
+    content: "";
+    position: absolute; top: -20px; left: -20px; right: -20px; bottom: -20px;
+    background-image: var(--end-bg); /* Картинку передадим через JS */
+    background-size: cover;
+    background-position: center;
+    filter: blur(10px) brightness(0.6); /* Размытие и затемнение */
+    z-index: -1;
+}
+
+/* Карточка по центру */
+.end-card {
+    background: rgba(20, 20, 20, 0.95);
+    border: 2px solid var(--gold-color);
+    border-radius: 15px;
+    padding: 30px;
+    width: 90%;
+    max-width: 500px; /* Ограничиваем ширину */
+    text-align: center;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    animation: popIn 0.5s ease-out;
+}
+
+@keyframes popIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Картинка внутри карточки (четкая) */
+.end-art-preview {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #555;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.end-title {
+    font-family: 'Cinzel', serif; 
+    font-size: 2.5rem; 
+    color: var(--gold-color); 
+    margin: 0 0 10px 0;
+}
+
+.end-desc {
+    font-size: 1.2rem; 
+    color: #ddd; 
+    margin-bottom: 30px;
+}

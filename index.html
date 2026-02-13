@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Легенда о Всадниках</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="background-layer"></div>
+
+    <div id="character-layer">
+        <div id="char-left" class="char-slot hidden"></div>
+        <div id="char-center" class="char-slot hidden"></div>
+        <div id="char-right" class="char-slot hidden"></div>
+    </div>
+
+    <div id="ui-layer">
+        <!-- ГЛАВНОЕ МЕНЮ -->
+        <div id="main-menu" class="overlay">
+            <h1 class="game-title">Легенда о Всадниках</h1>
+            <button class="btn-primary" onclick="engine.startGame()">Отправиться в приключение</button>
+        </div>
+
+        <!-- ГОНКА -->
+        <div id="race-screen" class="overlay hidden"></div>
+        
+        <!-- КОНЦОВКА -->
+        <div id="end-screen" class="overlay hidden">
+            <div class="end-text-container">
+                <h1 id="end-title"></h1>
+                <p id="end-desc"></p>
+                <button class="btn-primary" onclick="location.reload()">В главное меню</button>
+            </div>
+        </div>
+        
+        <!-- ПЕРЕХОД -->
+        <div id="transition-overlay" class="overlay hidden" onclick="engine.finishTransition()">
+            <h2 id="transition-text"></h2>
+            <div class="click-hint">(Нажмите, чтобы продолжить)</div>
+        </div>
+
+        <!-- ДИАЛОГ -->
+        <div id="dialogue-box" class="hidden">
+            <div id="speaker-name-box"></div>
+            <div id="text-content"></div>
+            <button id="next-btn" onclick="engine.nextLine()">Далее ▶</button>
+        </div>
+        
+        <!-- КАРУСЕЛЬ ВЫБОРА -->
+        <div id="choice-carousel" class="hidden">
+            <button class="carousel-arrow" onclick="engine.carouselPrev()">◀</button>
+            <div id="current-choice-text"></div>
+            <button class="carousel-arrow" onclick="engine.carouselNext()">▶</button>
+            <button class="btn-primary" onclick="engine.carouselConfirm()">Выбрать</button>
+        </div>
+
+        <div id="day-indicator"></div>
+    </div>
+
+    <script src="story.js"></script>
+    <script src="engine.js"></script>
+</body>
+</html>
