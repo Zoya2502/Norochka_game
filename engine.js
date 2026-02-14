@@ -1,5 +1,6 @@
 window.engine = {
-    state: { day: 1, dragon: null, mood: 0, gear: null, feedCount: 0 },
+    state: { day: 1, dragon: null, mood: 0, gear: null, feedCount: 0 },khvoynikMood: 'neutral', // Запоминаем настроение Хвойника
+    noraMood: 'neutral',
     currentScene: 'start',
     currentStep: 0,
     lastChoiceParams: null,
@@ -7,6 +8,65 @@ window.engine = {
     currentChoices: [],
     choiceIndex: 0,
     els: {},
+
+    // === АУДИО СИСТЕМА ===
+    audio: {
+        currentTrack: null,     // Основная музыка
+        currentAmbience: null,  // Фоновый шум (крылья)
+        sounds: {},
+        
+        init() {
+            // Предзагрузка важных звуков
+            this.sounds.roar = new Audio('audio/roar.ogg');
+        },
+
+        playMusic(filename) {
+            // Если этот трек уже играет, не перезапускаем
+            if (this.currentTrack && this.currentTrack.src.includes(filename)) return;
+            
+            this.stopMusic();
+            this.currentTrack = new Audio(`audio/${filename}.ogg`);
+            this.currentTrack.loop = true;
+            this.currentTrack.volume = 0.4; // Громкость музыки
+            this.currentTrack.play().catch(e => console.log("Браузер заблокировал автоплей:", e));
+        },
+
+        stopMusic() {
+            if (this.currentTrack) {
+                this.currentTrack.pause();
+                this.currentTrack.currentTime = 0;
+                this.currentTrack = null;
+            }
+        },
+
+        // Фоновый зацикленный звук (например, крылья)
+        playAmbience(filename) {
+            if (this.currentAmbience) this.stopAmbience();
+            this.currentAmbience = new Audio(`audio/${filename}.ogg`);
+            this.currentAmbience.loop = true;
+            this.currentAmbience.volume = 0.6; // Громче музыки для атмосферы
+            this.currentAmbience.play().catch(e => console.log("Браузер заблокировал эмбиент:", e));
+        },
+
+        stopAmbience() {
+            if (this.currentAmbience) {
+                this.currentAmbience.pause();
+                this.currentAmbience = null;
+            }
+        },
+
+        // Остановить вообще всё (для экрана концовки)
+        stopAll() {
+            this.stopMusic();
+            this.stopAmbience();
+        },
+
+        playSfx(filename) {
+            const sfx = new Audio(`audio/${filename}.ogg`);
+            sfx.volume = 0.7;
+            sfx.play();
+        }
+    },
 
     init() {
         this.els = {
@@ -21,6 +81,7 @@ window.engine = {
             day: document.getElementById('day-indicator'),
             transitionText: document.getElementById('transition-text')
         };
+        this.audio.init();
     },
 
     startGame() {
@@ -47,6 +108,12 @@ window.engine = {
             case 'jump': this.jumpTo(step.to); break;
             case 'transition': this.showTransition(step.text, step.to); break;
             case 'end': this.showEnd(step); break;
+            
+            // Команды аудио
+            case 'playMusic': this.audio.playMusic(step.file); this.nextLine(); break;
+            case 'stopMusic': this.audio.stopMusic(); this.nextLine(); break;
+            case 'stopAmbience': this.audio.stopAmbience(); this.nextLine(); break;
+            case 'playSound': this.audio.playSfx(step.file); this.nextLine(); break;
         }
     },
 
@@ -59,8 +126,28 @@ window.engine = {
         this.els.speaker.style.display = data.speaker ? "block" : "none";
         this.els.text.innerText = data.text.replace('{feedCount+1}', this.state.feedCount + 1);
 
-        if (data.speaker === "Хвойник") this.showChar('left', 'khvoynik', data.mood || 'neutral', 'speak');
-        else if (data.speaker === "Предрассветная Мгла") this.showChar('right', 'nora', data.mood || 'neutral', 'speak');
+        // === ЛОГИКА ПЕРЕКЛЮЧЕНИЯ ЭМОЦИЙ ===
+        
+        if (data.speaker === "Хвойник") {
+            // 1. Обновляем настроение Хвойника (если в сценарии есть новое mood, берем его, иначе оставляем старое)
+            this.state.khvoynikMood = data.mood || this.state.khvoynikMood;
+            
+            // 2. Хвойник ГОВОРИТ (speak) с новым настроением
+            this.showChar('left', 'khvoynik', this.state.khvoynikMood, 'speak');
+            
+            // 3. Нора МОЛЧИТ (silent) со своим ТЕКУЩИМ настроением
+            this.showChar('right', 'nora', this.state.noraMood, 'silent');
+        } 
+        else if (data.speaker === "Предрассветная Мгла") {
+            // 1. Обновляем настроение Норы
+            this.state.noraMood = data.mood || this.state.noraMood;
+            
+            // 2. Нора ГОВОРИТ (speak)
+            this.showChar('right', 'nora', this.state.noraMood, 'speak');
+            
+            // 3. Хвойник МОЛЧИТ (silent)
+            this.showChar('left', 'khvoynik', this.state.khvoynikMood, 'silent');
+        }
     },
 
     showChar(pos, name, mood = 'neutral', action = 'silent') {
@@ -107,23 +194,22 @@ window.engine = {
 
     showEnd(data) {
         this.stopRace();
-        // Скрываем лишнее
+        
+        // Останавливаем только фоновые шумы (крылья), 
+        // музыку НЕ трогаем (она задается в story.js перед концовкой)
+        this.audio.stopAmbience(); 
+        
         document.getElementById('character-layer').classList.add('hidden');
         this.els.dialogue.classList.add('hidden');
         
         const endScreen = this.els.screens.end;
         endScreen.classList.remove('hidden');
-
-        // 1. Устанавливаем фон для размытия через переменную CSS
-        // Это связывает JS с тем кодом ::before в CSS
+        
         endScreen.style.setProperty('--end-bg', `url('img/${data.art}.jpg')`);
 
-        // 2. Рисуем красивую карточку
         endScreen.innerHTML = `
             <div class="end-card">
-                <!-- Четкая картинка сверху -->
                 <img src="img/${data.art}.jpg" class="end-art-preview">
-                
                 <h1 class="end-title">${data.title}</h1>
                 <p class="end-desc">${data.desc}</p>
                 <button class="btn-primary" onclick="location.reload()">В главное меню</button>
@@ -134,9 +220,12 @@ window.engine = {
     actions: {
         showAllDragonsForChoice() {
             window.engine.els.slots.center.innerHTML = `
-                <img src="img/dragon_fury_neutral.png" style="position:absolute; left:-30%; height:75%; bottom:0; z-index: 10;">
+                <!-- Фурия: Впереди слева -->
+                <img src="img/dragon_fury_neutral.png" style="position:absolute; left:-20%; height:85%; bottom:0; z-index: 10;">
+                <!-- Песня Смерти: Центр -->
                 <img src="img/dragon_death_neutral.png" style="position:absolute; left:50%; transform:translateX(-50%); height:90%; bottom:0; z-index: 5;">
-                <img src="img/dragon_thunder_neutral.png" style="position:absolute; right:-30%; height:75%; bottom:0; z-index: 1;">`;
+                <!-- Громобой: Сзади справа -->
+                <img src="img/dragon_thunder_neutral.png" style="position:absolute; right:-25%; height:80%; bottom:0; z-index: 1;">`;
             window.engine.els.slots.center.classList.remove('hidden');
         },
         pickDragon() { window.engine.state.dragon = window.engine.lastChoiceParams; },
@@ -171,147 +260,158 @@ window.engine = {
         if(this.raceInterval) clearInterval(this.raceInterval); 
         document.onkeydown = null; 
         this.els.screens.race.classList.add('hidden'); 
-        // Удаляем старые препятствия
         document.querySelectorAll('.obstacle').forEach(e => e.remove());
+        // Звук НЕ останавливаем здесь, чтобы победная музыка могла доиграть до экрана концовки
     },
     
-    // В файле engine.js замени ВСЮ функцию startRace
-
-startRace() {
-    this.els.dialogue.classList.add('hidden');
-    const scr = this.els.screens.race;
-    scr.classList.remove('hidden');
-    scr.className = `overlay bg-${this.state.dragon === 'thunder' ? 'water' : 'sky'}-race`;
-    
-    scr.innerHTML = `
-        <div id="race-ui">
-            <div id="race-lives">❤️❤️❤️</div>
-            <div id="race-progress-bar"><div id="race-progress-fill"></div></div>
-        </div>
-        <div id="race-player"><img src="img/race_${this.state.dragon}.gif"></div>
-        <div id="mobile-controls">
-            <button id="btn-left">◀</button>
-            <button id="btn-right">▶</button>
-        </div>
-    `;
-    
-    let race = { 
-        dist: 0, 
-        lives: 3, 
-        playerX: 50, 
-        speed: 12, // Чуть снизил базовую скорость для управляемости
-        obstacles: [],
-        spawnCooldown: 0 // Таймер, чтобы камни не летели кучей
-    };
-
-    const player = document.getElementById('race-player');
-    const fill = document.getElementById('race-progress-fill');
-    const livesEl = document.getElementById('race-lives');
-    const maxDist = 10000;
-
-    let moveInterval = null;
-
-    const movePlayer = (direction) => {
-        if (direction === 'left') race.playerX = Math.max(5, race.playerX - 2.5);
-        if (direction === 'right') race.playerX = Math.min(95, race.playerX + 2.5);
-        player.style.left = `calc(${race.playerX}% - 60px)`;
-    };
-
-    const startMoving = (dir) => {
-        if (moveInterval) return;
-        moveInterval = setInterval(() => movePlayer(dir), 16);
-    };
-
-    const stopMoving = () => {
-        clearInterval(moveInterval);
-        moveInterval = null;
-    };
-
-    // Управление
-    document.onkeydown = (e) => {
-        if (e.key === "ArrowLeft") startMoving('left');
-        if (e.key === "ArrowRight") startMoving('right');
-    };
-    document.onkeyup = (e) => {
-        if (e.key === "ArrowLeft" || e.key === "ArrowRight") stopMoving();
-    };
-
-    const btnLeft = document.getElementById('btn-left');
-    const btnRight = document.getElementById('btn-right');
-    btnLeft.addEventListener('mousedown', () => startMoving('left'));
-    btnRight.addEventListener('mousedown', () => startMoving('right'));
-    btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); startMoving('left'); });
-    btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); startMoving('right'); });
-    document.addEventListener('mouseup', stopMoving);
-    document.addEventListener('touchend', stopMoving);
-
-    // ОСНОВНОЙ ЦИКЛ ГОНКИ
-    this.raceInterval = setInterval(() => {
-        race.dist += race.speed;
-        fill.style.width = Math.min(100, (race.dist / maxDist) * 100) + "%";
+    startRace() {
+        this.els.dialogue.classList.add('hidden');
+        const scr = this.els.screens.race;
+        scr.classList.remove('hidden');
+        scr.className = `overlay bg-${this.state.dragon === 'thunder' ? 'water' : 'sky'}-race`;
         
-        // Уменьшаем таймер спавна
-        if (race.spawnCooldown > 0) race.spawnCooldown--;
+        // Включаем музыку и звук крыльев
+        this.audio.playMusic('race');
+        this.audio.playAmbience('wings');
 
-        // Спавн препятствий (Только если таймер истек)
-        if (race.spawnCooldown <= 0 && Math.random() < 0.08) {
-            const ob = document.createElement('div');
-            ob.className = 'obstacle'; 
-            // Спавним в диапазоне 10% - 90% ширины
-            ob.style.left = (Math.random() * 80 + 10) + "%"; 
-            ob.style.top = "-100px";
-            ob.innerHTML = `<img src="img/rock.png">`;
-            scr.appendChild(ob); 
-            race.obstacles.push({ el: ob, y: -100 });
+        scr.innerHTML = `
+            <div id="race-ui">
+                <div id="race-lives">❤️❤️❤️</div>
+                <div id="race-progress-bar"><div id="race-progress-fill"></div></div>
+            </div>
+            <div id="race-player"><img src="img/race_${this.state.dragon}.gif"></div>
+            <div id="mobile-controls">
+                <button id="btn-left">◀</button>
+                <button id="btn-right">▶</button>
+            </div>
+        `;
+        
+        // === ПРОВЕРКА НА ФУРИЮ ===
+        const isFury = this.state.dragon === 'fury';
+
+        let race = { 
+            dist: 0, 
+            lives: 3, 
+            playerX: 50, 
+            // Фурия стартует быстрее (16), остальные (12)
+            speed: isFury ? 20 : 16, 
+            obstacles: [],
+            spawnCooldown: 0 
+        };
+
+        const player = document.getElementById('race-player');
+        const fill = document.getElementById('race-progress-fill');
+        const livesEl = document.getElementById('race-lives');
+        const maxDist = 35000;
+
+        let moveInterval = null;
+
+        // Движение игрока
+        const movePlayer = (direction) => {
+            if (direction === 'left') race.playerX = Math.max(5, race.playerX - 2.5);
+            if (direction === 'right') race.playerX = Math.min(95, race.playerX + 2.5);
+            player.style.left = `calc(${race.playerX}% - 60px)`;
+        };
+
+        const startMoving = (dir) => {
+            if (moveInterval) return;
+            moveInterval = setInterval(() => movePlayer(dir), 16);
+        };
+
+        const stopMoving = () => {
+            clearInterval(moveInterval);
+            moveInterval = null;
+        };
+
+        // Управление: Клавиатура
+        document.onkeydown = (e) => {
+            if (e.key === "ArrowLeft") startMoving('left');
+            if (e.key === "ArrowRight") startMoving('right');
+        };
+        document.onkeyup = (e) => {
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight") stopMoving();
+        };
+
+        // Управление: Сенсор / Мышь
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        
+        btnLeft.addEventListener('mousedown', () => startMoving('left'));
+        btnRight.addEventListener('mousedown', () => startMoving('right'));
+        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); startMoving('left'); });
+        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); startMoving('right'); });
+        
+        document.addEventListener('mouseup', stopMoving);
+        document.addEventListener('touchend', stopMoving);
+
+        // Игровой цикл
+        this.raceInterval = setInterval(() => {
+            race.dist += race.speed;
+            fill.style.width = Math.min(100, (race.dist / maxDist) * 100) + "%";
             
-            // Ставим задержку перед следующим камнем (25 кадров = ~0.5 сек минимум)
-            race.spawnCooldown = 5; 
-        }
+            if (race.spawnCooldown > 0) race.spawnCooldown--;
 
-        // Движение препятствий
-        for (let i = race.obstacles.length - 1; i >= 0; i--) {
-            let o = race.obstacles[i];
-            o.y += race.speed;
-            o.el.style.top = o.y + "px";
-            
-            const pRect = player.getBoundingClientRect();
-            // Хитбокс камня делаем чуть меньше картинки для честности (+15px отступы)
-            const oRect = o.el.getBoundingClientRect(); 
-            const hitMargin = 15;
+            // Спавн препятствий
+            if (race.spawnCooldown <= 0 && Math.random() < 0.15) {
+                const ob = document.createElement('div');
+                ob.className = 'obstacle'; 
+                ob.style.left = (Math.random() * 80 + 10) + "%"; 
+                ob.style.top = "-100px";
+                ob.innerHTML = `<img src="img/rock.png">`;
+                scr.appendChild(ob); 
+                race.obstacles.push({ el: ob, y: -100 });
+                race.spawnCooldown = 25; // Задержка между камнями
+            }
 
-            const hit = !(pRect.right < oRect.left + hitMargin || 
-                          pRect.left > oRect.right - hitMargin || 
-                          pRect.bottom < oRect.top + hitMargin || 
-                          pRect.top > oRect.bottom - hitMargin);
-
-            if (hit) {
-                race.lives--;
-                livesEl.innerText = "❤️".repeat(race.lives);
-                o.el.remove();
-                race.obstacles.splice(i, 1);
-                race.speed = Math.max(8, race.speed - 5); // Штраф скорости
+            // Обработка препятствий
+            for (let i = race.obstacles.length - 1; i >= 0; i--) {
+                let o = race.obstacles[i];
+                o.y += race.speed;
+                o.el.style.top = o.y + "px";
                 
-                player.style.filter = "sepia(1) hue-rotate(-50deg) saturate(5)";
-                setTimeout(() => player.style.filter = "none", 300);
+                const pRect = player.getBoundingClientRect();
+                const oRect = o.el.getBoundingClientRect(); 
+                const hitMargin = 15; // Хитбокс меньше картинки
 
-                if (race.lives <= 0) { 
-                    this.stopRace(); 
-                    stopMoving(); 
-                    this.jumpTo('race_lose'); 
+                const hit = !(pRect.right < oRect.left + hitMargin || 
+                              pRect.left > oRect.right - hitMargin || 
+                              pRect.bottom < oRect.top + hitMargin || 
+                              pRect.top > oRect.bottom - hitMargin);
+
+                if (hit) {
+                    race.lives--;
+                    livesEl.innerText = "❤️".repeat(race.lives);
+                    o.el.remove();
+                    race.obstacles.splice(i, 1);
+                    race.speed = Math.max(8, race.speed - 5);
+                    
+                    // === ВОТ ЭТО МЕСТО: ЗВУК РЫКА ===
+                    this.audio.playSfx('roar'); 
+
+                    player.style.filter = "sepia(1) hue-rotate(-50deg) saturate(5)";
+                    setTimeout(() => player.style.filter = "none", 300);
+
+                    if (race.lives <= 0) { 
+                        this.stopRace(); 
+                        stopMoving(); 
+                        this.jumpTo('race_lose'); 
+                    }
+                }
+                else if (o.y > window.innerHeight) { 
+                    o.el.remove(); 
+                    race.obstacles.splice(i, 1); 
+                    
+                    // === УСКОРЕНИЕ ===
+                    // Фурия (0.4) разгоняется быстрее остальных (0.2)
+                    race.speed += isFury ? 0.6 : 0.4; 
                 }
             }
-            else if (o.y > window.innerHeight) { 
-                o.el.remove(); 
-                race.obstacles.splice(i, 1); 
-                race.speed += 0.2; // Небольшое ускорение
-            }
-        }
 
-        if (race.dist >= maxDist) { 
-            this.stopRace(); 
-            stopMoving(); 
-            this.jumpTo('race_win'); 
-        }
-    }, 20);
-}
+            if (race.dist >= maxDist) { 
+                this.stopRace(); 
+                stopMoving(); 
+                this.jumpTo('race_win'); 
+            }
+        }, 20);
+    }
 };

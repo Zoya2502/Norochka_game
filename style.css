@@ -30,20 +30,6 @@ body {
 .bg-sky { background-image: url('img/bg_sky.jpg'); }
 .bg-water { background-image: url('img/bg_water.jpg'); }
 
-/* Фоны для гонки (с анимацией) */
-.bg-sky-race { 
-    background-image: url('img/bg_sky.jpg'); 
-    animation: raceScroll 2s linear infinite;
-}
-.bg-water-race { 
-    background-image: url('img/bg_water.jpg');
-    animation: raceScroll 2s linear infinite;
-}
-
-@keyframes raceScroll {
-    from { background-position: 0 0; }
-    to { background-position: 0 100%; } /* Движение вниз для ощущения полета вперед */
-}
 
 /* === ПЕРСОНАЖИ === */
 
@@ -355,12 +341,13 @@ body {
 .bg-sky-race { 
     background-image: url('img/bg_sky.jpg'); 
     background-size: cover;
-    animation: raceScroll 3s linear infinite;
+    background-position: center;
 }
 
 .bg-water-race { 
     background-image: url('img/bg_water.jpg');
     background-size: cover;
-    animation: raceScroll 3s linear infinite;
+    background-position: center;
+
 }
 
